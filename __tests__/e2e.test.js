@@ -13,6 +13,7 @@ const domDetector = require('../src/dom-detector.js');
 const cssSync = require('../src/css-sync.js');
 const pipManager = require('../src/pip-manager.js');
 const notification = require('../src/notification.js');
+const pipControls = require('../src/pip-controls.js');
 
 // Make module functions available globally (simulating content script scope)
 // In browser context, these are loaded as separate scripts and functions become global
@@ -25,6 +26,8 @@ global.showError = notification.showError;
 global.showSuccess = notification.showSuccess;
 global.notifyApiNotSupported = notification.notifyApiNotSupported;
 global.notifyContainerNotFound = notification.notifyContainerNotFound;
+global.hideNativeControls = pipControls.hideNativeControls;
+global.injectPipControls = pipControls.injectPipControls;
 
 /**
  * Helper function to set up realistic Stremio-like DOM structure
@@ -72,13 +75,20 @@ function createMockPipWindow() {
     body: pipBodyContainer,
     head: pipHeadContainer,
     createElement: (tag) => document.createElement(tag),
-    querySelector: (selector) => pipBodyContainer.querySelector(selector)
+    querySelector: (selector) => pipBodyContainer.querySelector(selector),
+    querySelectorAll: (selector) => pipBodyContainer.querySelectorAll(selector),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn()
   };
-  
   return {
     document: pipDoc,
     addEventListener: jest.fn(),
     close: jest.fn(),
+    innerWidth: 800,
+    innerHeight: 600,
+    outerWidth: 816,
+    outerHeight: 638,
+    resizeTo: jest.fn(),
     _bodyChildren: bodyChildren // For testing assertions
   };
 }
