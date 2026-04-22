@@ -12,6 +12,7 @@ describe('PiP Manager - Document Picture-in-Picture', () => {
 
   beforeEach(() => {
     // Reset mocks
+    jest.clearAllMocks();
     mockPipWindow = null;
     mockContainer = null;
     
