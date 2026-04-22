@@ -12,15 +12,15 @@
  * @param {number} seconds - Time in seconds
  * @returns {string} Formatted time string
  */
-function formatTime(seconds) {
+function formatTime(seconds, forceHours) {
   if (isNaN(seconds) || !isFinite(seconds)) {
-    return '0:00';
+    return forceHours ? '0:00:00' : '0:00';
   }
   var hrs = Math.floor(seconds / 3600);
   var mins = Math.floor((seconds % 3600) / 60);
   var secs = Math.floor(seconds % 60);
   var secStr = (secs < 10 ? '0' : '') + secs;
-  if (hrs > 0) {
+  if (hrs > 0 || forceHours) {
     return hrs + ':' + (mins < 10 ? '0' : '') + mins + ':' + secStr;
   }
   return mins + ':' + secStr;
@@ -257,7 +257,8 @@ function injectPipControls(pipWindow, container) {
   var timer = pipDoc.createElement('span');
   timer.className = 'pip-timer';
   timer.setAttribute('data-pip-timer', 'true');
-  timer.textContent = formatTime(video.currentTime) + ' / ' + formatTime(video.duration);
+  var showHours = video.duration >= 3600;
+  timer.textContent = formatTime(video.currentTime, showHours) + ' / ' + formatTime(video.duration, showHours);
   controls.appendChild(timer);
   
   // Volume container
@@ -379,7 +380,8 @@ function injectPipControls(pipWindow, container) {
       progress.value = '0';
     }
     
-    timer.textContent = formatTime(currentTime) + ' / ' + formatTime(duration);
+    var showHours = duration >= 3600;
+    timer.textContent = formatTime(currentTime, showHours) + ' / ' + formatTime(duration, showHours);
   }
   
   function onPlay() {

@@ -282,8 +282,8 @@ describe('PiP Controls', () => {
       injectPipControls(mockPipWindow, mockContainer);
 
       const timer = mockPipDoc.querySelector('[data-pip-timer]');
-      // currentTime=120 (2:00), duration=3600 (1:00:00)
-      expect(timer.textContent).toContain('2:00');
+      // currentTime=120 (0:02:00), duration=3600 (1:00:00) — forceHours since duration >= 3600
+      expect(timer.textContent).toContain('0:02:00');
       expect(timer.textContent).toContain('1:00:00');
     });
   });
