@@ -81,6 +81,92 @@ describe('DOM Detector - findVideoContainer()', () => {
       const result = findVideoContainer();
       expect(result).toBe(container);
     });
+
+    it('should walk up multiple DOM levels to find container', () => {
+      // Arrange: Deeply nested structure - video is 3 levels deep
+      const outerWrapper = document.createElement('div');
+      const middleWrapper = document.createElement('div');
+      const innerWrapper = document.createElement('div');
+      
+      const container = document.createElement('div');
+      const video = document.createElement('video');
+      const subtitleDiv = document.createElement('div');
+      subtitleDiv.style.position = 'absolute';
+      subtitleDiv.style.zIndex = '1';
+      
+      container.appendChild(video);
+      container.appendChild(subtitleDiv);
+      innerWrapper.appendChild(container);
+      middleWrapper.appendChild(innerWrapper);
+      outerWrapper.appendChild(middleWrapper);
+      document.body.appendChild(outerWrapper);
+      
+      // Act
+      const result = findVideoContainer();
+      
+      // Assert - should walk up from video through innerWrapper, middleWrapper to find container
+      expect(result).toBe(container);
+    });
+
+    it('should return null when walking up entire tree without finding subtitle sibling', () => {
+      // Arrange: Video exists but no subtitle overlay anywhere in the tree
+      const wrapper = document.createElement('div');
+      const container = document.createElement('div');
+      const video = document.createElement('video');
+      const otherDiv = document.createElement('div');
+      otherDiv.style.position = 'absolute';
+      // Missing zIndex - should not match
+      
+      container.appendChild(video);
+      container.appendChild(otherDiv);
+      wrapper.appendChild(container);
+      document.body.appendChild(wrapper);
+      
+      // Act
+      const result = findVideoContainer();
+      
+      // Assert
+      expect(result).toBeNull();
+    });
+
+    it('should ignore non-DIV siblings with position:absolute', () => {
+      // Arrange: Non-DIV element with absolute positioning should be ignored
+      const container = document.createElement('div');
+      const video = document.createElement('video');
+      const spanOverlay = document.createElement('span');
+      spanOverlay.style.position = 'absolute';
+      spanOverlay.style.zIndex = '1';
+      
+      container.appendChild(video);
+      container.appendChild(spanOverlay);
+      document.body.appendChild(container);
+      
+      // Act
+      const result = findVideoContainer();
+      
+      // Assert - should not match because it's a SPAN, not a DIV
+      expect(result).toBeNull();
+    });
+
+
+    it('should handle z-index as string with includes check', () => {
+      // Arrange: zIndex as string that includes '1' but not exact match
+      const container = document.createElement('div');
+      const video = document.createElement('video');
+      const subtitleDiv = document.createElement('div');
+      subtitleDiv.style.position = 'absolute';
+      subtitleDiv.style.zIndex = '10'; // Contains '1' but not exact '1'
+      
+      container.appendChild(video);
+      container.appendChild(subtitleDiv);
+      document.body.appendChild(container);
+      
+      // Act
+      const result = findVideoContainer();
+      
+      // Assert - should match because '10'.includes('1') is true
+      expect(result).toBe(container);
+    });
   });
 
   describe('Edge cases and error handling', () => {
