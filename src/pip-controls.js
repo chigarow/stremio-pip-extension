@@ -16,9 +16,14 @@ function formatTime(seconds) {
   if (isNaN(seconds) || !isFinite(seconds)) {
     return '0:00';
   }
-  var mins = Math.floor(seconds / 60);
+  var hrs = Math.floor(seconds / 3600);
+  var mins = Math.floor((seconds % 3600) / 60);
   var secs = Math.floor(seconds % 60);
-  return mins + ':' + (secs < 10 ? '0' : '') + secs;
+  var secStr = (secs < 10 ? '0' : '') + secs;
+  if (hrs > 0) {
+    return hrs + ':' + (mins < 10 ? '0' : '') + mins + ':' + secStr;
+  }
+  return mins + ':' + secStr;
 }
 
 /**
