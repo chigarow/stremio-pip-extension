@@ -39,6 +39,10 @@ async function openPiP(container) {
 
     // Listen for pagehide to restore elements (fires once, auto-cleaned)
     pipWindow.addEventListener('pagehide', () => {
+      // Clean up PiP controls listeners before restoring
+      if (pipWindow._pipControlsCleanup) {
+        pipWindow._pipControlsCleanup();
+      }
       if (originalParent) {
         originalParent.append(container);
       }

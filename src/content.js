@@ -8,6 +8,7 @@
  * - dom-detector.js (findVideoContainer)
  * - css-sync.js (copyStylesheets)
  * - pip-manager.js (openPiP, closePiP, togglePiP)
+ * - pip-controls.js (hideNativeControls, injectPipControls)
  * - notification.js (showError, showSuccess, notifyApiNotSupported, notifyContainerNotFound)
  */
 
@@ -39,7 +40,11 @@ async function handleTogglePiP() {
 
   // Step 2: Check if closing or opening
   if (globalThis.documentPictureInPicture && globalThis.documentPictureInPicture.window) {
-    // Closing PiP
+    // Clean up PiP controls before closing
+    var currentPipWindow = globalThis.documentPictureInPicture.window;
+    if (currentPipWindow && currentPipWindow._pipControlsCleanup) {
+      currentPipWindow._pipControlsCleanup();
+    }
     closePiP();
     showSuccess('PiP mode deactivated');
     return;
@@ -58,7 +63,13 @@ async function handleTogglePiP() {
     // Step 5: Copy stylesheets to PiP window
     copyStylesheets(pipWindow.document);
 
-    // Step 6: Show success notification
+    // Step 6: Hide Stremio native controls in PiP
+    hideNativeControls(pipWindow.document);
+
+    // Step 7: Inject custom PiP controls
+    injectPipControls(pipWindow, container);
+
+    // Step 8: Show success notification
     showSuccess('PiP mode activated');
   } catch (error) {
     showError('Failed to open PiP: ' + error.message);
