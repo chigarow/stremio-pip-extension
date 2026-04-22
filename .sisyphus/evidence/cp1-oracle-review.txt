@@ -1,0 +1,34 @@
+## Oracle Review - CP1 (After Fix)
+
+### Selector Strategy Analysis
+The dual approach is well-designed for CSS Module hash changes:
+- **Primary strategy** uses 3-tier selector specificity: exact class → `video-` prefix → `video-container` partial match
+- **Fallback strategy** walks up from `<video>` element checking for sibling with `position: absolute` + `z-index: 1`
+
+### Edge Cases Coverage
+Tests cover the critical scenarios well:
+- ✅ Empty DOM (returns null)
+- ✅ No video element (returns null)
+- ✅ Video without subtitle container (returns null)
+- ✅ Dynamically loaded content (re-callable function)
+- ✅ Full Stremio Web DOM simulation
+
+### CSS Syncing Analysis
+CORS handling is robust:
+- **Try-catch** on `cssRules` access gracefully skips inaccessible stylesheets
+- **Dual-path approach** with Set-based deduplication prevents duplicates
+- **External stylesheets**: Preserves `href`, `media`, `type` attributes correctly
+
+### Fix Verification
+✅ **Duplicate stylesheet bug is FIXED.** The implementation correctly uses a `Set` to track hrefs:
+- Line 16 initializes `addedHrefs = new Set()`
+- Lines 27-28 skip and track hrefs from `document.styleSheets` loop
+- Lines 69-70 skip and track hrefs from `linkElements` loop
+
+### Remaining Issues (Minor, Acceptable)
+1. z-index check only for '1' - acceptable for current use case
+2. Redundant getAttribute check - no functional impact
+
+### VERDICT: APPROVE
+
+All 22 tests pass. Fix is correct and minimal.

@@ -12,7 +12,10 @@
  * @param {Document} targetDoc - The target document (PiP window document)
  */
 function copyStylesheets(targetDoc) {
-  // First, copy inline stylesheets from document.styleSheets
+  // Track hrefs already added to prevent duplicates
+  const addedHrefs = new Set();
+
+  // First, copy stylesheets from document.styleSheets API
   const styleSheets = document.styleSheets;
 
   for (let i = 0; i < styleSheets.length; i++) {
@@ -20,6 +23,10 @@ function copyStylesheets(targetDoc) {
 
     // Check if this is an external stylesheet (has href)
     if (styleSheet.href) {
+      // Skip if already added
+      if (addedHrefs.has(styleSheet.href)) continue;
+      addedHrefs.add(styleSheet.href);
+
       // External stylesheet - create link element
       const link = targetDoc.createElement('link');
       link.rel = 'stylesheet';
@@ -54,9 +61,14 @@ function copyStylesheets(targetDoc) {
     }
   }
 
-  // Also copy external link elements directly (for jsdom compatibility and CORS handling)
+  // Also copy external link elements directly (for jsdom compatibility)
+  // Skip any that were already added via styleSheets API
   const linkElements = document.querySelectorAll('link[rel="stylesheet"]');
   linkElements.forEach((linkEl) => {
+    // Skip if already added
+    if (addedHrefs.has(linkEl.href)) return;
+    addedHrefs.add(linkEl.href);
+
     const link = targetDoc.createElement('link');
     link.rel = 'stylesheet';
     link.type = linkEl.type || 'text/css';
