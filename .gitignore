@@ -1,0 +1,7 @@
+node_modules/
+coverage/
+*.zip
+.DS_Store
+.sisyphus/
+*.log
+.env
