@@ -12,6 +12,7 @@ const ICON_URL = 'icons/icon48.png';
  */
 function showError(message) {
   if (typeof chrome === 'undefined' || !chrome.notifications) {
+    console.warn('Chrome notifications API not available:', message);
     return;
   }
 
@@ -30,6 +31,7 @@ function showError(message) {
  */
 function showSuccess(message) {
   if (typeof chrome === 'undefined' || !chrome.notifications) {
+    console.warn('Chrome notifications API not available:', message);
     return;
   }
 

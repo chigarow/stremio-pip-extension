@@ -1,0 +1,76 @@
+================================================================================
+TASK 3 - GREEN PHASE VERIFICATION
+================================================================================
+Date: 2026-04-22
+Task: Implement DOM Detector to make T2 tests PASS
+
+--------------------------------------------------------------------------------
+TEST RESULTS
+--------------------------------------------------------------------------------
+
+> stremio-pip-extension@1.0.0 test
+> jest __tests__/dom-detector.test.js
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        ~0.6s
+
+--------------------------------------------------------------------------------
+TEST BREAKDOWN
+--------------------------------------------------------------------------------
+
+✓ Primary selector - class pattern matching (3 tests)
+  ✓ should find container by exact class video-tkpQm
+  ✓ should find container by partial class match video-container
+  ✓ should handle CSS Module hash changes (e.g., video-abc12)
+
+✓ Fallback selector - structural heuristics (2 tests)
+  ✓ should find container by walking up from video element
+  ✓ should identify container with subtitle sibling by inline styles
+
+✓ Edge cases and error handling (4 tests)
+  ✓ should return null when no video element exists
+  ✓ should return null when video exists but no container with subtitle
+  ✓ should return null on empty DOM
+  ✓ should handle dynamically loaded content
+
+✓ Stremio Web DOM structure simulation (1 test)
+  ✓ should match actual Stremio Web structure from screenshot
+
+--------------------------------------------------------------------------------
+IMPLEMENTATION DETAILS
+--------------------------------------------------------------------------------
+
+File: src/dom-detector.js
+Function: findVideoContainer()
+
+Dual Selector Strategy:
+1. Primary: Class pattern matching (handles CSS Module hashes)
+   - Selectors tried in order:
+     * '[class*="video-tkpQm"]'  (exact match)
+     * '[class^="video-"]'        (CSS Module hash pattern)
+     * '[class*="video-container"]' (partial match)
+   - Verifies element contains a video element
+
+2. Fallback: Structural heuristics (walks DOM from video element)
+   - Finds video element
+   - Walks up parent chain looking for container with subtitle sibling
+   - Subtitle characteristics: DIV with position:absolute and z-index:1
+
+--------------------------------------------------------------------------------
+VERIFICATION CHECKLIST
+--------------------------------------------------------------------------------
+
+✓ src/dom-detector.js created with findVideoContainer() function
+✓ Dual selector strategy implemented (primary + fallback)
+✓ All 10 tests PASS
+✓ No console errors or warnings
+✓ No TODOs in code
+✓ No console.log statements
+✓ Returns null on failure (not undefined)
+✓ Uses class patterns (not hardcoded exact class names)
+
+--------------------------------------------------------------------------------
+GREEN PHASE COMPLETE
+--------------------------------------------------------------------------------

@@ -27,24 +27,30 @@ async function openPiP(container) {
   // Store original parent for restoration
   originalParent = container.parentElement;
 
-  // Request PiP window with container dimensions
-  const pipWindow = await globalThis.documentPictureInPicture.requestWindow({
-    width: container.clientWidth,
-    height: container.clientHeight
-  });
+  try {
+    // Request PiP window with container dimensions
+    const pipWindow = await globalThis.documentPictureInPicture.requestWindow({
+      width: container.clientWidth,
+      height: container.clientHeight
+    });
 
-  // Move container to PiP window (not clone - preserves video state)
-  pipWindow.document.body.append(container);
+    // Move container to PiP window (not clone - preserves video state)
+    pipWindow.document.body.append(container);
 
-  // Listen for pagehide to restore elements
-  pipWindow.addEventListener('pagehide', () => {
-    if (originalParent) {
-      originalParent.append(container);
-    }
+    // Listen for pagehide to restore elements (fires once, auto-cleaned)
+    pipWindow.addEventListener('pagehide', () => {
+      if (originalParent) {
+        originalParent.append(container);
+      }
+      originalParent = null;
+    }, { once: true });
+
+    return pipWindow;
+  } catch (error) {
+    // Reset state on failure (e.g., user denied PiP, browser error)
     originalParent = null;
-  });
-
-  return pipWindow;
+    throw error;
+  }
 }
 
 /**

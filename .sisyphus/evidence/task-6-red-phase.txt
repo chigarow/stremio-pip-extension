@@ -1,0 +1,54 @@
+Task 6: Write Unit Tests for PiP Manager (RED Phase)
+=====================================================
+Date: 2025-04-22
+Status: RED PHASE - Tests created, failing as expected
+
+Test File: __tests__/pip-manager.test.js
+==========================================
+Created comprehensive unit tests covering:
+- openPiP() with correct dimensions
+- Container movement to PiP window
+- Original parent storage for restoration
+- pagehide event handling for element restoration
+- closePiP() functionality
+- togglePiP() open/close behavior
+- API not supported error handling
+- requestWindow rejection handling
+- Null container handling
+- Video playback state maintenance
+
+Test Results:
+=============
+> stremio-pip-extension@1.0.0 test
+> jest __tests__/pip-manager.test.js
+
+FAIL __tests__/pip-manager.test.js
+  ● Test suite failed to run
+
+    Cannot find module '../src/pip-manager.js' from '__tests__/pip-manager.test.js'
+
+       5 |
+       6 | // Import will fail until T7 implementation - that's expected for RED phase
+    >  7 | const { openPiP, closePiP, togglePiP } = require('../src/pip-manager.js');
+         |                                          ^
+       8 |
+       9 | describe('PiP Manager - Document Picture-in-Picture', () => {
+      10 |   let mockPipWindow;
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/index.js:863:11)
+      at Object.require (__tests__/pip-manager.test.js:7:42)
+
+Test Suites: 1 failed, 1 total
+Tests: 0 total
+Snapshots: 0 total
+Time: 0.697 s
+
+RED Phase Verification:
+=======================
+✓ Tests created with comprehensive coverage
+✓ Tests FAIL as expected (module doesn't exist yet)
+✓ All test cases defined for T7 implementation
+✓ Mock documentPictureInPicture API properly configured
+✓ Error handling scenarios covered
+
+Next Step: T7 (GREEN Phase) - Implement src/pip-manager.js to make these tests pass
