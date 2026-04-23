@@ -132,7 +132,8 @@ function injectPipControls(pipWindow, container) {
     'font-size: 12px;' +
     'font-family: monospace;' +
     'white-space: nowrap;' +
-    'min-width: 80px;' +
+    'min-width: 110px;' +
+    'flex-shrink: 0;' +
     'text-align: center;' +
     '}' +
     '.pip-volume-container {' +
