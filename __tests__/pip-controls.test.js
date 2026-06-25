@@ -471,6 +471,23 @@ describe('PiP Controls', () => {
 
       // Should not resize since ratio matches
       expect(mockPipWindow.resizeTo).not.toHaveBeenCalled();
+      // Should not resize since ratio matches
+      expect(mockPipWindow.resizeTo).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Return value contract (Review Issue 3)', () => {
+    it('should return true when video is found and controls are injected', () => {
+      const result = injectPipControls(mockPipWindow, mockContainer);
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when no video element is in the container', () => {
+      const emptyContainer = document.createElement('div');
+      const result = injectPipControls(mockPipWindow, emptyContainer);
+
+      expect(result).toBe(false);
     });
   });
 });

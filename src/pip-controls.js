@@ -55,7 +55,7 @@ function injectPipControls(pipWindow, container) {
   var video = container.querySelector('video');
   
   if (!video) {
-    return;
+    return false;
   }
   
   // Inject controls styles
@@ -436,8 +436,10 @@ function injectPipControls(pipWindow, container) {
   // Store cleanup on pipWindow for external access
   pipWindow._pipControlsCleanup = cleanup;
   
-  // Show controls initially for a few seconds
+// Show controls initially for a few seconds
   startHideTimer();
+
+  return true;
 }
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {

@@ -67,7 +67,15 @@ async function handleTogglePiP() {
     hideNativeControls(pipWindow.document);
 
     // Step 7: Inject custom PiP controls
-    injectPipControls(pipWindow, container);
+    const controlsInjected = injectPipControls(pipWindow, container);
+
+    if (!controlsInjected) {
+      // No <video> element found in the container — surface failure to the user
+      // and tear down the PiP window so we do not leave a broken state behind.
+      showError('Could not find video element in PiP window');
+      closePiP();
+      return;
+    }
 
     // Step 8: Show success notification
     showSuccess('PiP mode activated');

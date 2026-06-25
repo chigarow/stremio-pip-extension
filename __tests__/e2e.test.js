@@ -496,4 +496,51 @@ describe('E2E Simulation Tests - Complete User Workflow', () => {
       expect(linkElements[0].href).toBe('https://example.com/styles.css');
     });
   });
+
+  describe('7. Failure path: injectPipControls returns false (Review Issue 3)', () => {
+    it('should show error and close PiP when no video is found in PiP container', async () => {
+      // Arrange: Set up Stremio DOM with a video in container
+      setupStremioDOM();
+
+      // Simulate the browser setting documentPictureInPicture.window when PiP opens,
+      // so closePiP() can find the live window to tear down on failure.
+      global.documentPictureInPicture.requestWindow.mockImplementation(async () => {
+        global.documentPictureInPicture.window = mockPipWindow;
+        return mockPipWindow;
+      });
+
+      // Force the failure path: injectPipControls returns false (no <video> in container)
+      global.injectPipControls = jest.fn().mockReturnValue(false);
+
+      // Act: Trigger the toggle flow via the registered message listener
+      const sendResponse = jest.fn();
+      const result = messageListener({ action: 'togglePiP' }, {}, sendResponse);
+      expect(result).toBe(true);
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Assert: injectPipControls was invoked
+      expect(global.injectPipControls).toHaveBeenCalled();
+
+      // Assert: Error notification was shown with the failure message
+      expect(global.chrome.notifications.create).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          type: 'basic',
+          message: 'Could not find video element in PiP window'
+        })
+      );
+
+      // Assert: PiP window was closed as part of the failure cleanup
+      expect(mockPipWindow.close).toHaveBeenCalled();
+
+      // Assert: Success notification was NOT shown (no false-positive 'PiP mode activated')
+      const successCall = global.chrome.notifications.create.mock.calls.find(
+        call => call[1] && call[1].message === 'PiP mode activated'
+      );
+      expect(successCall).toBeUndefined();
+
+      // Assert: sendResponse was still called with success (orchestrator handles failure internally)
+      expect(sendResponse).toHaveBeenCalledWith({ success: true });
+    });
+  });
 });
