@@ -119,27 +119,24 @@ describe('Background service worker', () => {
         notificationId: expect.stringMatching(/^error-/)
       });
     });
-
-    it('should schedule chrome.notifications.clear after 3000ms when autoDismiss is true', () => {
-      // Act
-      const result = handleNotificationRequest({
+    it('should NOT schedule chrome.notifications.clear (autoDismiss is now handled by content script, not the worker)', () => {
+      // The MV3 service worker may be terminated after sendResponse returns, so any
+      // setTimeout scheduled here is unreliable. The content script owns the
+      // 3s timer now and sends a separate 'clearNotification' message when ready.
+      handleNotificationRequest({
         kind: 'success',
         message: 'Auto dismiss test',
         autoDismiss: true
       });
 
-      // Assert: clear not called yet
+      // Act: Advance timers past the auto-dismiss window
+      jest.advanceTimersByTime(5000);
+
+      // Assert: clear was never called from the worker
       expect(global.chrome.notifications.clear).not.toHaveBeenCalled();
-
-      // Act: Advance timers by 3000ms
-      jest.advanceTimersByTime(3000);
-
-      // Assert: clear was called with the notificationId
-      expect(global.chrome.notifications.clear).toHaveBeenCalledWith(result.notificationId);
     });
 
-    it('should NOT schedule chrome.notifications.clear when autoDismiss is false', () => {
-      // Act
+    it('should still NOT call chrome.notifications.clear for error notifications', () => {
       handleNotificationRequest({
         kind: 'error',
         message: 'Persistent error',
@@ -181,6 +178,62 @@ describe('Background service worker', () => {
 
       // Assert
       expect(result.notificationId).toMatch(/^error-\d+$/);
+    });
+  });
+
+  describe('clearNotification action via message listener', () => {
+    // Capture the listener registered by background.js so we can invoke it directly.
+    let registeredListener;
+
+    function captureListenerAndRequireBackground() {
+      const addListenerMock = jest.fn((fn) => { registeredListener = fn; });
+      global.chrome = {
+        ...global.chrome,
+        runtime: { onMessage: { addListener: addListenerMock } }
+      };
+      // Fresh require after resetting modules so the listener is registered against
+      // the captured addListener mock.
+      jest.resetModules();
+      require('../background.js');
+      return addListenerMock;
+    }
+
+    it('should call chrome.notifications.clear with the notificationId and return {success:true}', () => {
+      // Arrange
+      const addListenerMock = captureListenerAndRequireBackground();
+      expect(addListenerMock).toHaveBeenCalledTimes(1);
+      expect(typeof registeredListener).toBe('function');
+
+      const sendResponse = jest.fn();
+      const result = registeredListener(
+        { action: 'clearNotification', notificationId: 'test-id' },
+        {},
+        sendResponse
+      );
+
+      // Assert
+      expect(global.chrome.notifications.clear).toHaveBeenCalledWith('test-id');
+      expect(sendResponse).toHaveBeenCalledWith({ success: true });
+      // Synchronous response: listener returns false (channel does not need to stay open).
+      expect(result).toBe(false);
+    });
+
+    it('should still respond with {success:true} even if the notificationId has already expired', () => {
+      // Arrange
+      captureListenerAndRequireBackground();
+      const sendResponse = jest.fn();
+
+      // Act
+      registeredListener(
+        { action: 'clearNotification', notificationId: 'expired-id' },
+        {},
+        sendResponse
+      );
+
+      // Assert: clear is still called (chrome.notifications.clear is a no-op for unknown ids),
+      // and the response is success so the content script does not retry.
+      expect(global.chrome.notifications.clear).toHaveBeenCalledWith('expired-id');
+      expect(sendResponse).toHaveBeenCalledWith({ success: true });
     });
   });
 });

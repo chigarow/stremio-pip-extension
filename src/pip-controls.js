@@ -436,7 +436,7 @@ function injectPipControls(pipWindow, container) {
   // Store cleanup on pipWindow for external access
   pipWindow._pipControlsCleanup = cleanup;
   
-// Show controls initially for a few seconds
+  // Show controls initially for a few seconds
   startHideTimer();
 
   return true;

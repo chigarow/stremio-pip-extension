@@ -455,14 +455,16 @@ describe('Integration Tests - Module Interactions', () => {
       // Caller would show success notification
       showSuccess('PiP mode activated');
       
-      // Assert: Success notification relayed via sendMessage
+      // Assert: Success notification relayed via sendMessage. autoDismiss is now
+      // implicit in showSuccess (the content script schedules the 3s clear via a
+      // callback), so it is not in the payload anymore.
       expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'notify',
           kind: 'success',
-          message: 'PiP mode activated',
-          autoDismiss: true
-        })
+          message: 'PiP mode activated'
+        }),
+        expect.any(Function)
       );
     });
   });

@@ -190,16 +190,16 @@ describe('E2E Simulation Tests - Complete User Workflow', () => {
       // Assert: CSS was synced to PiP window
       expect(mockPipWindow.document.head.children.length).toBeGreaterThan(0);
       
-      // Assert: Success notification was relayed via sendMessage
+      // Assert: Success notification was relayed via sendMessage with a callback.
+      // autoDismiss is now implicit in showSuccess — no autoDismiss field in the payload.
       expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'notify',
           kind: 'success',
-          message: 'PiP mode activated',
-          autoDismiss: true
-        })
+          message: 'PiP mode activated'
+        }),
+        expect.any(Function)
       );
-      
       // Assert: sendResponse was called with success
       expect(sendResponse).toHaveBeenCalledWith({ success: true });
     });
@@ -222,16 +222,16 @@ describe('E2E Simulation Tests - Complete User Workflow', () => {
       // Assert: PiP window was closed
       expect(mockPipWindow.close).toHaveBeenCalled();
       
-      // Assert: Success notification was relayed via sendMessage
+      // Assert: Success notification was relayed via sendMessage with a callback.
+      // autoDismiss is now implicit in showSuccess — no autoDismiss field in the payload.
       expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'notify',
           kind: 'success',
-          message: 'PiP mode deactivated',
-          autoDismiss: true
-        })
+          message: 'PiP mode deactivated'
+        }),
+        expect.any(Function)
       );
-      
       // Assert: sendResponse was called with success
       expect(sendResponse).toHaveBeenCalledWith({ success: true });
     });
@@ -387,16 +387,15 @@ describe('E2E Simulation Tests - Complete User Workflow', () => {
       expect(global.documentPictureInPicture.requestWindow).toHaveBeenCalledTimes(1);
       expect(newMockPipWindow._bodyChildren.includes(container)).toBe(true);
       
-      // Assert: Success notification relayed again
+      // Assert: Success notification relayed again — autoDismiss is now implicit in showSuccess.
       expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
           action: 'notify',
           kind: 'success',
-          message: 'PiP mode activated',
-          autoDismiss: true
-        })
+          message: 'PiP mode activated'
+        }),
+        expect.any(Function)
       );
-      
       expect(sendResponse2).toHaveBeenCalledWith({ success: true });
     });
   });

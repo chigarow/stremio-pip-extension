@@ -34,11 +34,36 @@ function showError(message) {
 }
 
 /**
- * Shows a success notification to the user
+ * Shows a success notification to the user.
+ * Auto-dismiss is scheduled on the content-script side: MV3 service workers can
+ * be terminated after sendResponse returns, so any setTimeout scheduled inside
+ * the worker is unreliable. The content script lives as long as the page, so
+ * it sends a follow-up 'clearNotification' message after 3s.
  * @param {string} message - The success message to display
  */
 function showSuccess(message) {
-  relayNotification('success', message, true);
+  if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+    console.warn('Stremio PiP: cannot relay notification:', message);
+    return;
+  }
+
+  chrome.runtime.sendMessage(
+    {
+      action: 'notify',
+      kind: 'success',
+      message: message
+    },
+    function(response) {
+      if (response && response.success && response.notificationId) {
+        setTimeout(function() {
+          chrome.runtime.sendMessage({
+            action: 'clearNotification',
+            notificationId: response.notificationId
+          });
+        }, 3000);
+      }
+    }
+  );
 }
 
 /**

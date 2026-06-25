@@ -26,7 +26,6 @@ const CONTENT_SCRIPTS = [
  * @param {Object} request - The notification request payload
  * @param {string} request.kind - 'error' or 'success'
  * @param {string} request.message - The notification message
- * @param {boolean} request.autoDismiss - Whether to auto-dismiss after 3 seconds
  * @returns {{success: boolean, notificationId?: string, error?: string}}
  */
 function handleNotificationRequest(request) {
@@ -42,19 +41,23 @@ function handleNotificationRequest(request) {
     message: request.message
   });
 
-  if (request.autoDismiss) {
-    setTimeout(() => {
-      if (chrome.notifications && typeof chrome.notifications.clear === 'function') {
-        chrome.notifications.clear(notificationId);
-      }
-    }, 3000);
-  }
+  // Auto-dismiss is no longer scheduled here. The MV3 service worker can be
+  // terminated by Chrome after sendResponse returns, so any setTimeout scheduled
+  // inside this function is unreliable. The content script (which lives as long
+  // as the page) sends a follow-up 'clearNotification' message after 3s.
 
   return { success: true, notificationId: notificationId };
 }
 
-// Handle notification relay messages from content scripts
+// Handle messages from content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'clearNotification') {
+    if (chrome.notifications && typeof chrome.notifications.clear === 'function') {
+      chrome.notifications.clear(request.notificationId);
+    }
+    sendResponse({ success: true });
+    return false; // Synchronous response: channel does not need to stay open.
+  }
   if (request.action === 'notify') {
     const result = handleNotificationRequest(request);
     sendResponse(result);

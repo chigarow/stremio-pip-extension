@@ -83,6 +83,13 @@ async function handleTogglePiP() {
     // Step 8: Show success notification
     showSuccess('PiP mode activated');
   } catch (error) {
+    // Race-guard rejections are benign user-impatience (rapid double-clicks),
+    // not real failures — silently swallow them so the user does not see a
+    // confusing error toast. All other errors still surface via showError.
+    if (error && (error.message === 'PiP open already in progress' ||
+                  error.message === 'PiP close already in progress')) {
+      return;
+    }
     showError('Failed to open PiP: ' + error.message);
   }
 }

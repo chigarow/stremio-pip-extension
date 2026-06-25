@@ -209,7 +209,6 @@ describe('content.js orchestrator — handleTogglePiP branches', () => {
       expect(mocks.notifyContainerNotFound).not.toHaveBeenCalled();
     });
   });
-
   describe('openPiP rejection', () => {
     it('shows error with the original message when openPiP throws', async () => {
       const fakeContainer = document.createElement('div');
@@ -225,6 +224,65 @@ describe('content.js orchestrator — handleTogglePiP branches', () => {
       expect(mocks.showSuccess).not.toHaveBeenCalled();
       expect(mocks.notifyApiNotSupported).not.toHaveBeenCalled();
       expect(mocks.notifyContainerNotFound).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('benign race-guard rejections', () => {
+    // When the user rapid-double-clicks the toolbar icon, pip-manager.js throws
+    // 'PiP open already in progress' from its in-flight guard. That's user
+    // impatience, not a real failure — it must NOT surface as an error notification.
+    it('silently swallows "PiP open already in progress" without calling showError', async () => {
+      const fakeContainer = document.createElement('div');
+      mocks.findVideoContainer.mockReturnValue(fakeContainer);
+      mocks.openPiP.mockRejectedValue(new Error('PiP open already in progress'));
+
+      // The promise must resolve (not reject) so the listener's .then() branch
+      // fires and sendResponse({success:true}) reaches background.js.
+      await expect(handleTogglePiP()).resolves.toBeUndefined();
+
+      expect(mocks.showError).not.toHaveBeenCalled();
+      // The normal success path was never reached either, so showSuccess stays quiet.
+      expect(mocks.showSuccess).not.toHaveBeenCalled();
+      expect(mocks.copyStylesheets).not.toHaveBeenCalled();
+      expect(mocks.hideNativeControls).not.toHaveBeenCalled();
+      expect(mocks.injectPipControls).not.toHaveBeenCalled();
+    });
+
+    it('also swallows "PiP close already in progress" (defensive: same guard pattern as open)', async () => {
+      const fakeContainer = document.createElement('div');
+      mocks.findVideoContainer.mockReturnValue(fakeContainer);
+      mocks.openPiP.mockRejectedValue(new Error('PiP close already in progress'));
+
+      await expect(handleTogglePiP()).resolves.toBeUndefined();
+
+      expect(mocks.showError).not.toHaveBeenCalled();
+      expect(mocks.showSuccess).not.toHaveBeenCalled();
+    });
+
+    it('forwards "PiP open already in progress" to the listener as sendResponse({success:true})', async () => {
+      // Set up a fresh addListener mock for this test only. jest.resetModules()
+      // ensures the next require re-runs content.js's top-level listener registration.
+      jest.resetModules();
+      const addListenerMock = jest.fn();
+      global.chrome = { runtime: { onMessage: { addListener: addListenerMock } } };
+      require('../src/content.js');
+      const listener = addListenerMock.mock.calls[0][0];
+
+      const fakeContainer = document.createElement('div');
+      mocks.findVideoContainer.mockReturnValue(fakeContainer);
+      mocks.openPiP.mockRejectedValue(new Error('PiP open already in progress'));
+
+      const sendResponse = jest.fn();
+      const result = listener({ action: 'togglePiP' }, {}, sendResponse);
+      expect(result).toBe(true); // keep channel open for async response
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Because handleTogglePiP resolved (not rejected), the listener calls
+      // sendResponse({success:true}) — the orchestrator stays confident the
+      // PiP toggle is in progress and the user sees no error notification.
+      expect(sendResponse).toHaveBeenCalledWith({ success: true });
+      expect(mocks.showError).not.toHaveBeenCalled();
     });
   });
 });
