@@ -1,9 +1,23 @@
 /**
  * Background Service Worker - Stremio PiP Extension
- * 
+ *
  * Handles extension icon click and sends toggle message to content script.
  * Uses chrome.scripting API to inject content script if not already loaded.
  */
+
+/**
+ * Content script files in load order (must match manifest.json content_scripts[0].js).
+ * Kept in sync via __tests__/background.test.js drift guard.
+ * @type {string[]}
+ */
+const CONTENT_SCRIPTS = [
+  'src/dom-detector.js',
+  'src/css-sync.js',
+  'src/pip-manager.js',
+  'src/pip-controls.js',
+  'src/notification.js',
+  'src/content.js'
+];
 
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
@@ -29,13 +43,7 @@ chrome.action.onClicked.addListener(async (tab) => {
         // Inject content scripts manually
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
-          files: [
-            'src/dom-detector.js',
-            'src/css-sync.js',
-            'src/pip-manager.js',
-            'src/notification.js',
-            'src/content.js'
-          ]
+          files: CONTENT_SCRIPTS
         });
 
         // Send toggle message again after injection
@@ -50,3 +58,8 @@ chrome.action.onClicked.addListener(async (tab) => {
     }
   }
 });
+
+// Export for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { CONTENT_SCRIPTS };
+}
