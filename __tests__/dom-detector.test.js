@@ -149,23 +149,88 @@ describe('DOM Detector - findVideoContainer()', () => {
     });
 
 
-    it('should handle z-index as string with includes check', () => {
-      // Arrange: zIndex as string that includes '1' but not exact match
+    it('should match subtitle with z-index: 1 (baseline)', () => {
       const container = document.createElement('div');
       const video = document.createElement('video');
       const subtitleDiv = document.createElement('div');
       subtitleDiv.style.position = 'absolute';
-      subtitleDiv.style.zIndex = '10'; // Contains '1' but not exact '1'
-      
+      subtitleDiv.style.zIndex = '1';
       container.appendChild(video);
       container.appendChild(subtitleDiv);
       document.body.appendChild(container);
-      
-      // Act
-      const result = findVideoContainer();
-      
-      // Assert - should match because '10'.includes('1') is true
-      expect(result).toBe(container);
+      expect(findVideoContainer()).toBe(container);
+    });
+
+    it('should match subtitle with z-index: 2 (was missed by old heuristic)', () => {
+      const container = document.createElement('div');
+      const video = document.createElement('video');
+      const subtitleDiv = document.createElement('div');
+      subtitleDiv.style.position = 'absolute';
+      subtitleDiv.style.zIndex = '2';
+      container.appendChild(video);
+      container.appendChild(subtitleDiv);
+      document.body.appendChild(container);
+      expect(findVideoContainer()).toBe(container);
+    });
+
+    it('should match subtitle with z-index: 10 (numeric, not substring logic)', () => {
+      const container = document.createElement('div');
+      const video = document.createElement('video');
+      const subtitleDiv = document.createElement('div');
+      subtitleDiv.style.position = 'absolute';
+      subtitleDiv.style.zIndex = '10';
+      container.appendChild(video);
+      container.appendChild(subtitleDiv);
+      document.body.appendChild(container);
+      expect(findVideoContainer()).toBe(container);
+    });
+
+    it('should match subtitle with z-index: 100 (large numeric value)', () => {
+      const container = document.createElement('div');
+      const video = document.createElement('video');
+      const subtitleDiv = document.createElement('div');
+      subtitleDiv.style.position = 'absolute';
+      subtitleDiv.style.zIndex = '100';
+      container.appendChild(video);
+      container.appendChild(subtitleDiv);
+      document.body.appendChild(container);
+      expect(findVideoContainer()).toBe(container);
+    });
+
+    it('should NOT match subtitle with z-index: 0 (not an overlay)', () => {
+      const container = document.createElement('div');
+      const video = document.createElement('video');
+      const subtitleDiv = document.createElement('div');
+      subtitleDiv.style.position = 'absolute';
+      subtitleDiv.style.zIndex = '0';
+      container.appendChild(video);
+      container.appendChild(subtitleDiv);
+      document.body.appendChild(container);
+      expect(findVideoContainer()).toBeNull();
+    });
+
+    it('should NOT match subtitle with negative z-index', () => {
+      const container = document.createElement('div');
+      const video = document.createElement('video');
+      const subtitleDiv = document.createElement('div');
+      subtitleDiv.style.position = 'absolute';
+      subtitleDiv.style.zIndex = '-1';
+      container.appendChild(video);
+      container.appendChild(subtitleDiv);
+      document.body.appendChild(container);
+      expect(findVideoContainer()).toBeNull();
+    });
+
+    it('should NOT match subtitle with z-index: auto', () => {
+      const container = document.createElement('div');
+      const video = document.createElement('video');
+      const subtitleDiv = document.createElement('div');
+      subtitleDiv.style.position = 'absolute';
+      subtitleDiv.style.zIndex = 'auto';
+      container.appendChild(video);
+      container.appendChild(subtitleDiv);
+      document.body.appendChild(container);
+      expect(findVideoContainer()).toBeNull();
     });
   });
 

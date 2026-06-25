@@ -43,16 +43,18 @@ function findVideoContainer() {
       // Skip the video element itself
       if (child === video) return false;
 
-      // Check for subtitle characteristics
-      const isDiv = child.tagName === 'DIV';
-      const style = child.style || {};
-      const position = style.position || child.getAttribute?.('style')?.includes('position');
-      const zIndex = style.zIndex || child.getAttribute?.('style')?.includes('z-index');
-
-      // Subtitle overlay: DIV with absolute positioning and z-index >= 1
+      // Subtitle overlay: DIV with absolute positioning and numeric z-index >= 1
+      // Note: only inline style is checked. Subtitle overlays styled solely via
+      // external stylesheets (no inline style attr) cannot be detected here —
+      // primary class-based selectors above handle that case.
+      var isDiv = child.tagName === 'DIV';
+      var style = child.style || {};
+      var position = style.position;
+      var zIndex = parseInt(style.zIndex, 10);
       return isDiv &&
-             (position === 'absolute' || (typeof position === 'string' && position.includes('absolute'))) &&
-             (zIndex === '1' || (typeof zIndex === 'string' && zIndex.includes('1')));
+             position === 'absolute' &&
+             !isNaN(zIndex) &&
+             zIndex >= 1;
     });
 
     if (hasSubtitleSibling) {
