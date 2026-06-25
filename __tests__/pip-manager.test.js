@@ -4,7 +4,7 @@
 const { describe, it, expect, beforeEach } = require('@jest/globals');
 
 // Import will fail until T7 implementation - that's expected for RED phase
-const { openPiP, closePiP, togglePiP } = require('../src/pip-manager.js');
+const { openPiP, closePiP, togglePiP, _resetState } = require('../src/pip-manager.js');
 
 describe('PiP Manager - Document Picture-in-Picture', () => {
   let mockPipWindow;
@@ -15,6 +15,7 @@ describe('PiP Manager - Document Picture-in-Picture', () => {
     jest.clearAllMocks();
     mockPipWindow = null;
     mockContainer = null;
+    _resetState(); // reset in-flight race guard flags
     
     // Mock documentPictureInPicture API
     global.documentPictureInPicture = {
@@ -249,6 +250,138 @@ describe('PiP Manager - Document Picture-in-Picture', () => {
 
       // Assert: Container was passed to PiP window body via append (move, not clone)
       // This preserves video playback state - verified by 'should move container to PiP window' test
+    });
+  });
+  describe('Race condition guards (rapid toggle)', () => {
+    beforeEach(() => {
+      _resetState();
+    });
+
+    it('should reject second openPiP while first is still opening', async () => {
+      mockContainer = {
+        clientWidth: 640,
+        clientHeight: 480,
+        parentElement: document.body
+      };
+
+      let resolveFirst;
+      const firstPromise = new Promise(resolve => { resolveFirst = resolve; });
+      mockPipWindow = {
+        document: { body: document.createElement('body') },
+        addEventListener: jest.fn(),
+        close: jest.fn()
+      };
+      global.documentPictureInPicture.requestWindow.mockReturnValue(firstPromise);
+
+      // Start first openPiP (in-flight)
+      const firstCall = openPiP(mockContainer);
+
+      // Second concurrent call should reject immediately
+      await expect(openPiP(mockContainer))
+        .rejects.toThrow('PiP open already in progress');
+
+      // Let the first complete
+      resolveFirst(mockPipWindow);
+      await firstCall;
+    });
+
+    it('should reject openPiP while closing (pagehide pending)', async () => {
+      mockContainer = {
+        clientWidth: 640,
+        clientHeight: 480,
+        parentElement: document.body
+      };
+      mockPipWindow = {
+        document: { body: document.createElement('body') },
+        addEventListener: jest.fn(),
+        close: jest.fn()
+      };
+      global.documentPictureInPicture.requestWindow.mockResolvedValue(mockPipWindow);
+      global.documentPictureInPicture.window = mockPipWindow;
+
+      await openPiP(mockContainer);
+      // Simulate close in progress (closing flag set by closePiP)
+      closePiP();
+
+      // An open attempted during close should be rejected
+      await expect(openPiP(mockContainer))
+        .rejects.toThrow('PiP close already in progress');
+    });
+
+    it('should reject closePiP while opening (no-op)', async () => {
+      mockContainer = {
+        clientWidth: 640,
+        clientHeight: 480,
+        parentElement: document.body
+      };
+      let resolveFirst;
+      const firstPromise = new Promise(resolve => { resolveFirst = resolve; });
+      mockPipWindow = {
+        document: { body: document.createElement('body') },
+        addEventListener: jest.fn(),
+        close: jest.fn()
+      };
+      global.documentPictureInPicture.requestWindow.mockReturnValue(firstPromise);
+
+      const firstCall = openPiP(mockContainer);
+
+      // closePiP during open should be a no-op (no window yet) and not throw
+      expect(() => closePiP()).not.toThrow();
+
+      resolveFirst(mockPipWindow);
+      await firstCall;
+    });
+
+    it('should reset opening flag on requestWindow rejection', async () => {
+      mockContainer = {
+        clientWidth: 640,
+        clientHeight: 480,
+        parentElement: document.body
+      };
+      global.documentPictureInPicture.requestWindow.mockRejectedValueOnce(
+        new Error('user denied')
+      );
+
+      await expect(openPiP(mockContainer)).rejects.toThrow('user denied');
+
+      // Should be able to open again immediately
+      mockPipWindow = {
+        document: { body: document.createElement('body') },
+        addEventListener: jest.fn(),
+        close: jest.fn()
+      };
+      global.documentPictureInPicture.requestWindow.mockResolvedValueOnce(mockPipWindow);
+      await expect(openPiP(mockContainer)).resolves.toBe(mockPipWindow);
+    });
+
+    it('should reset closing flag after pagehide fires', async () => {
+      mockContainer = {
+        clientWidth: 640,
+        clientHeight: 480,
+        parentElement: document.body
+      };
+      let pagehideCallback = null;
+      mockPipWindow = {
+        document: { body: document.createElement('body') },
+        addEventListener: jest.fn((event, cb) => {
+          if (event === 'pagehide') pagehideCallback = cb;
+        }),
+        close: jest.fn()
+      };
+      global.documentPictureInPicture.requestWindow.mockResolvedValue(mockPipWindow);
+      global.documentPictureInPicture.window = mockPipWindow;
+
+      await openPiP(mockContainer);
+      closePiP();
+
+      // Fire pagehide — should clear closing flag
+      if (pagehideCallback) pagehideCallback();
+
+      // Now open should work again
+      const newMockPipWindow = { ...mockPipWindow, addEventListener: jest.fn() };
+      global.documentPictureInPicture.requestWindow.mockResolvedValue(newMockPipWindow);
+      global.documentPictureInPicture.window = null;
+      await expect(openPiP(mockContainer)).resolves.toBe(newMockPipWindow);
     });
   });
 });

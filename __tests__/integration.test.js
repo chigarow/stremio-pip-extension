@@ -6,7 +6,7 @@ const { describe, it, expect, beforeEach, afterEach } = require('@jest/globals')
 // Import all modules for integration testing
 const { findVideoContainer } = require('../src/dom-detector.js');
 const { copyStylesheets } = require('../src/css-sync.js');
-const { openPiP, closePiP, togglePiP } = require('../src/pip-manager.js');
+const { openPiP, closePiP, togglePiP, _resetState } = require('../src/pip-manager.js');
 const { showError, showSuccess, notifyApiNotSupported, notifyContainerNotFound } = require('../src/notification.js');
 
 /**
@@ -51,6 +51,7 @@ describe('Integration Tests - Module Interactions', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    _resetState(); // reset in-flight race guard flags
     document.body.innerHTML = '';
     document.head.innerHTML = '';
     
