@@ -3,8 +3,7 @@ module.exports = {
   testEnvironment: 'jsdom',
   setupFiles: ['jest-webextension-mock'],
   collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/content.js'
+    'src/**/*.js'
   ],
   coverageThreshold: {
     global: {

@@ -12,15 +12,18 @@
  * - notification.js (showError, showSuccess, notifyApiNotSupported, notifyContainerNotFound)
  */
 
-// Handle messages from background script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'togglePiP') {
-    handleTogglePiP()
-      .then(() => sendResponse({ success: true }))
-      .catch((error) => sendResponse({ success: false, error: error.message }));
-    return true; // Keep message channel open for async response
-  }
-});
+// Handle messages from background script. Guarded so the file can be required
+// safely under jsdom (where chrome.runtime.onMessage may not exist).
+if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'togglePiP') {
+      handleTogglePiP()
+        .then(() => sendResponse({ success: true }))
+        .catch((error) => sendResponse({ success: false, error: error.message }));
+      return true; // Keep message channel open for async response
+    }
+  });
+}
 
 /**
  * Main PiP toggle handler
@@ -41,7 +44,7 @@ async function handleTogglePiP() {
   // Step 2: Check if closing or opening
   if (globalThis.documentPictureInPicture && globalThis.documentPictureInPicture.window) {
     // Clean up PiP controls before closing
-    var currentPipWindow = globalThis.documentPictureInPicture.window;
+    const currentPipWindow = globalThis.documentPictureInPicture.window;
     if (currentPipWindow && currentPipWindow._pipControlsCleanup) {
       currentPipWindow._pipControlsCleanup();
     }
@@ -82,4 +85,9 @@ async function handleTogglePiP() {
   } catch (error) {
     showError('Failed to open PiP: ' + error.message);
   }
+}
+
+// Export for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { handleTogglePiP };
 }
