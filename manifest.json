@@ -5,7 +5,8 @@
   "description": "Enables Document Picture-in-Picture for Stremio Web with HTML subtitle overlays visible in the PiP window.",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "notifications"
   ],
   "action": {
     "default_icon": {

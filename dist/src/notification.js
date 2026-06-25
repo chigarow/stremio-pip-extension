@@ -1,28 +1,36 @@
 /**
  * Notification module for Stremio PiP extension
- * Handles user notifications via Chrome notifications API
+ * Relays notification requests to background.js via chrome.runtime.sendMessage.
+ * MV3 content scripts cannot access chrome.notifications directly;
+ * the background service worker owns the chrome.notifications API.
  */
 
-// Icon URL for notifications
-const ICON_URL = 'icons/icon48.png';
+/**
+ * Relays a notification request to the background service worker.
+ * @param {string} kind - 'error' or 'success'
+ * @param {string} message - The notification message
+ * @param {boolean} autoDismiss - Whether to auto-dismiss after 3 seconds
+ */
+function relayNotification(kind, message, autoDismiss) {
+  if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+    console.warn('Stremio PiP: cannot relay notification:', message);
+    return;
+  }
+
+  chrome.runtime.sendMessage({
+    action: 'notify',
+    kind: kind,
+    message: message,
+    autoDismiss: autoDismiss
+  });
+}
 
 /**
  * Shows an error notification to the user
  * @param {string} message - The error message to display
  */
 function showError(message) {
-  if (typeof chrome === 'undefined' || !chrome.notifications) {
-    console.warn('Chrome notifications API not available:', message);
-    return;
-  }
-
-  const notificationId = 'error-' + Date.now();
-  chrome.notifications.create(notificationId, {
-    type: 'basic',
-    iconUrl: ICON_URL,
-    title: 'Stremio PiP',
-    message: message
-  });
+  relayNotification('error', message, false);
 }
 
 /**
@@ -30,25 +38,7 @@ function showError(message) {
  * @param {string} message - The success message to display
  */
 function showSuccess(message) {
-  if (typeof chrome === 'undefined' || !chrome.notifications) {
-    console.warn('Chrome notifications API not available:', message);
-    return;
-  }
-
-  const notificationId = 'success-' + Date.now();
-  chrome.notifications.create(notificationId, {
-    type: 'basic',
-    iconUrl: ICON_URL,
-    title: 'Stremio PiP',
-    message: message
-  });
-
-  // Auto-dismiss after 3 seconds
-  setTimeout(() => {
-    if (chrome.notifications && chrome.notifications.clear) {
-      chrome.notifications.clear(notificationId);
-    }
-  }, 3000);
+  relayNotification('success', message, true);
 }
 
 /**

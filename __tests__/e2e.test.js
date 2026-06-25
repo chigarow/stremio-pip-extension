@@ -110,18 +110,18 @@ describe('E2E Simulation Tests - Complete User Workflow', () => {
       window: null
     };
     
-    // Mock chrome APIs
+    // Mock chrome APIs — notification relay via sendMessage (not direct notifications.create)
     global.chrome = {
       runtime: {
         onMessage: {
           addListener: jest.fn((callback) => {
             messageListener = callback;
           })
-        }
-      },
-      notifications: {
-        create: jest.fn(),
-        clear: jest.fn()
+        },
+        sendMessage: jest.fn((payload, callback) => {
+          // Simulate background.js responding with success
+          if (callback) callback({ success: true, notificationId: payload.kind + '-123' });
+        })
       }
     };
     
@@ -190,12 +190,13 @@ describe('E2E Simulation Tests - Complete User Workflow', () => {
       // Assert: CSS was synced to PiP window
       expect(mockPipWindow.document.head.children.length).toBeGreaterThan(0);
       
-      // Assert: Success notification was shown
-      expect(global.chrome.notifications.create).toHaveBeenCalledWith(
-        expect.any(String),
+      // Assert: Success notification was relayed via sendMessage
+      expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'basic',
-          message: 'PiP mode activated'
+          action: 'notify',
+          kind: 'success',
+          message: 'PiP mode activated',
+          autoDismiss: true
         })
       );
       
@@ -221,12 +222,13 @@ describe('E2E Simulation Tests - Complete User Workflow', () => {
       // Assert: PiP window was closed
       expect(mockPipWindow.close).toHaveBeenCalled();
       
-      // Assert: Success notification was shown
-      expect(global.chrome.notifications.create).toHaveBeenCalledWith(
-        expect.any(String),
+      // Assert: Success notification was relayed via sendMessage
+      expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'basic',
-          message: 'PiP mode deactivated'
+          action: 'notify',
+          kind: 'success',
+          message: 'PiP mode deactivated',
+          autoDismiss: true
         })
       );
       
@@ -248,12 +250,13 @@ describe('E2E Simulation Tests - Complete User Workflow', () => {
       expect(result).toBe(true);
       await new Promise(resolve => setTimeout(resolve, 10));
       
-      // Assert: Container not found notification was triggered
-      expect(global.chrome.notifications.create).toHaveBeenCalledWith(
-        expect.any(String),
+      // Assert: Container not found notification was relayed via sendMessage
+      expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'basic',
-          message: expect.stringContaining('container')
+          action: 'notify',
+          kind: 'error',
+          message: expect.stringContaining('container'),
+          autoDismiss: false
         })
       );
       
@@ -279,12 +282,13 @@ describe('E2E Simulation Tests - Complete User Workflow', () => {
       expect(result).toBe(true);
       await new Promise(resolve => setTimeout(resolve, 10));
       
-      // Assert: API not supported notification was triggered
-      expect(global.chrome.notifications.create).toHaveBeenCalledWith(
-        expect.any(String),
+      // Assert: API not supported notification was relayed via sendMessage
+      expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'basic',
-          message: expect.stringContaining('not supported')
+          action: 'notify',
+          kind: 'error',
+          message: expect.stringContaining('not supported'),
+          autoDismiss: false
         })
       );
       
@@ -309,12 +313,13 @@ describe('E2E Simulation Tests - Complete User Workflow', () => {
       expect(result).toBe(true);
       await new Promise(resolve => setTimeout(resolve, 10));
       
-      // Assert: Error notification was shown (error caught in try/catch)
-      expect(global.chrome.notifications.create).toHaveBeenCalledWith(
-        expect.any(String),
+      // Assert: Error notification was relayed via sendMessage (error caught in try/catch)
+      expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'basic',
-          message: expect.stringContaining('Failed to open PiP')
+          action: 'notify',
+          kind: 'error',
+          message: expect.stringContaining('Failed to open PiP'),
+          autoDismiss: false
         })
       );
       
@@ -366,7 +371,7 @@ describe('E2E Simulation Tests - Complete User Workflow', () => {
       // === PHASE 3: Reopen PiP ===
       // Reset mocks for reopen
       global.documentPictureInPicture.requestWindow.mockClear();
-      global.chrome.notifications.create.mockClear();
+      global.chrome.runtime.sendMessage.mockClear();
       
       // Create new mock PiP window for reopen
       const newMockPipWindow = createMockPipWindow();
@@ -382,11 +387,13 @@ describe('E2E Simulation Tests - Complete User Workflow', () => {
       expect(global.documentPictureInPicture.requestWindow).toHaveBeenCalledTimes(1);
       expect(newMockPipWindow._bodyChildren.includes(container)).toBe(true);
       
-      // Assert: Success notification shown again
-      expect(global.chrome.notifications.create).toHaveBeenCalledWith(
-        expect.any(String),
+      // Assert: Success notification relayed again
+      expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: 'PiP mode activated'
+          action: 'notify',
+          kind: 'success',
+          message: 'PiP mode activated',
+          autoDismiss: true
         })
       );
       
@@ -521,21 +528,22 @@ describe('E2E Simulation Tests - Complete User Workflow', () => {
       // Assert: injectPipControls was invoked
       expect(global.injectPipControls).toHaveBeenCalled();
 
-      // Assert: Error notification was shown with the failure message
-      expect(global.chrome.notifications.create).toHaveBeenCalledWith(
-        expect.any(String),
+      // Assert: Error notification was relayed via sendMessage with the failure message
+      expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'basic',
-          message: 'Could not find video element in PiP window'
+          action: 'notify',
+          kind: 'error',
+          message: 'Could not find video element in PiP window',
+          autoDismiss: false
         })
       );
 
       // Assert: PiP window was closed as part of the failure cleanup
       expect(mockPipWindow.close).toHaveBeenCalled();
 
-      // Assert: Success notification was NOT shown (no false-positive 'PiP mode activated')
-      const successCall = global.chrome.notifications.create.mock.calls.find(
-        call => call[1] && call[1].message === 'PiP mode activated'
+      // Assert: Success notification was NOT sent (no false-positive 'PiP mode activated')
+      const successCall = global.chrome.runtime.sendMessage.mock.calls.find(
+        call => call[0] && call[0].message === 'PiP mode activated'
       );
       expect(successCall).toBeUndefined();
 

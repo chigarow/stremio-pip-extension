@@ -19,6 +19,48 @@ const CONTENT_SCRIPTS = [
   'src/content.js'
 ];
 
+/**
+ * Handles notification requests from content scripts.
+ * Content scripts cannot access chrome.notifications directly in MV3,
+ * so they relay via chrome.runtime.sendMessage to this background worker.
+ * @param {Object} request - The notification request payload
+ * @param {string} request.kind - 'error' or 'success'
+ * @param {string} request.message - The notification message
+ * @param {boolean} request.autoDismiss - Whether to auto-dismiss after 3 seconds
+ * @returns {{success: boolean, notificationId?: string, error?: string}}
+ */
+function handleNotificationRequest(request) {
+  if (!chrome.notifications || typeof chrome.notifications.create !== 'function') {
+    return { success: false, error: 'chrome.notifications API not available' };
+  }
+
+  const notificationId = request.kind + '-' + Date.now();
+  chrome.notifications.create(notificationId, {
+    type: 'basic',
+    iconUrl: 'icons/icon48.png',
+    title: 'Stremio PiP',
+    message: request.message
+  });
+
+  if (request.autoDismiss) {
+    setTimeout(() => {
+      if (chrome.notifications && typeof chrome.notifications.clear === 'function') {
+        chrome.notifications.clear(notificationId);
+      }
+    }, 3000);
+  }
+
+  return { success: true, notificationId: notificationId };
+}
+
+// Handle notification relay messages from content scripts
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'notify') {
+    const result = handleNotificationRequest(request);
+    sendResponse(result);
+  }
+});
+
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
   try {
@@ -61,5 +103,5 @@ chrome.action.onClicked.addListener(async (tab) => {
 
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { CONTENT_SCRIPTS };
+  module.exports = { CONTENT_SCRIPTS, handleNotificationRequest };
 }

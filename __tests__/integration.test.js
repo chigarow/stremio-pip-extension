@@ -62,11 +62,10 @@ describe('Integration Tests - Module Interactions', () => {
       window: null
     };
     
-    // Mock chrome.notifications
+    // Mock chrome.runtime.sendMessage (notification relay to background.js)
     global.chrome = {
-      notifications: {
-        create: jest.fn(),
-        clear: jest.fn()
+      runtime: {
+        sendMessage: jest.fn()
       }
     };
     
@@ -214,12 +213,13 @@ describe('Integration Tests - Module Interactions', () => {
       // Act
       notifyApiNotSupported();
       
-      // Assert: Error notification was triggered
-      expect(global.chrome.notifications.create).toHaveBeenCalledWith(
-        expect.any(String),
+      // Assert: Error notification was relayed via sendMessage
+      expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'basic',
-          message: expect.stringContaining('not supported')
+          action: 'notify',
+          kind: 'error',
+          message: expect.stringContaining('not supported'),
+          autoDismiss: false
         })
       );
     });
@@ -231,18 +231,19 @@ describe('Integration Tests - Module Interactions', () => {
       // Act
       notifyContainerNotFound();
       
-      // Assert: Error notification was triggered
-      expect(global.chrome.notifications.create).toHaveBeenCalledWith(
-        expect.any(String),
+      // Assert: Error notification was relayed via sendMessage
+      expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'basic',
-          message: expect.stringContaining('container')
+          action: 'notify',
+          kind: 'error',
+          message: expect.stringContaining('container'),
+          autoDismiss: false
         })
       );
     });
 
-    it('should use console.warn fallback when chrome.notifications unavailable', () => {
-      // Arrange: Remove chrome API
+    it('should use console.warn fallback when chrome.runtime.sendMessage unavailable', () => {
+      // Arrange: Remove chrome API entirely
       global.chrome = undefined;
       
       // Act
@@ -250,7 +251,7 @@ describe('Integration Tests - Module Interactions', () => {
       
       // Assert: Falls back to console.warn
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Chrome notifications API not available:',
+        'Stremio PiP: cannot relay notification:',
         'Test error message'
       );
     });
@@ -269,7 +270,7 @@ describe('Integration Tests - Module Interactions', () => {
       
       // In real usage, caller would call showError() after catching
       showError('Failed to open PiP window');
-      expect(global.chrome.notifications.create).toHaveBeenCalled();
+      expect(global.chrome.runtime.sendMessage).toHaveBeenCalled();
     });
   });
 
@@ -356,7 +357,7 @@ describe('Integration Tests - Module Interactions', () => {
       
       // Caller would use notifyApiNotSupported()
       notifyApiNotSupported();
-      expect(global.chrome.notifications.create).toHaveBeenCalled();
+      expect(global.chrome.runtime.sendMessage).toHaveBeenCalled();
     });
 
     it('should restore container to original parent on PiP failure', async () => {
@@ -454,12 +455,13 @@ describe('Integration Tests - Module Interactions', () => {
       // Caller would show success notification
       showSuccess('PiP mode activated');
       
-      // Assert
-      expect(global.chrome.notifications.create).toHaveBeenCalledWith(
-        expect.any(String),
+      // Assert: Success notification relayed via sendMessage
+      expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'basic',
-          message: 'PiP mode activated'
+          action: 'notify',
+          kind: 'success',
+          message: 'PiP mode activated',
+          autoDismiss: true
         })
       );
     });
